@@ -1,5 +1,5 @@
-import { Heading } from '@components';
+import { HomePage } from '@pages';
 
 export const App = () => {
-    return <Heading text="Hello, World!" />;
+    return <HomePage />;
 };
