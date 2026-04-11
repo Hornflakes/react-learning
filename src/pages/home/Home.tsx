@@ -1,6 +1,7 @@
 import { getAccounts, getCurrencies } from '@apis';
 import { TitledSection } from '@components';
 import { useResource } from '@hooks';
+import { use, useEffect } from 'react';
 
 const CurrenciesList = () => {
     console.log('[CurrenciesList] rendered');
@@ -29,27 +30,28 @@ const CurrenciesList = () => {
     );
 };
 
+let accountsController = new AbortController();
+const accountsPromise = getAccounts(accountsController.signal);
+
 const AccountsList = () => {
     console.log('[AccountsList] rendered');
+    const accounts = use(accountsPromise);
 
-    const [{ data, state, error }, { refetch }] = useResource(getAccounts);
+    useEffect(() => {
+        accountsController = new AbortController();
+
+        return () => {
+            accountsController.abort();
+        };
+    }, []);
 
     return (
         <TitledSection title="Accounts">
-            {state === 'pending' ? (
-                <p>Loading accounts...</p>
-            ) : error ? (
-                <>
-                    <p>{error.message}</p>
-                    <button onClick={() => refetch()}>refetch</button>
-                </>
-            ) : (
-                <ul>
-                    {data?.map((account) => (
-                        <li key={account.id}>{account.currencyCode}</li>
-                    ))}
-                </ul>
-            )}
+            <ul>
+                {accounts.map((account) => (
+                    <li key={account.id}>{account.currencyCode}</li>
+                ))}
+            </ul>
         </TitledSection>
     );
 };
