@@ -1,6 +1,6 @@
 import { getAccounts, getCurrencies } from '@apis';
 import { ErrorBoundary, TitledSection } from '@components';
-import { usePromiseResource, useResource, type PromiseResource } from '@hooks';
+import { usePromiseResource, useResource } from '@hooks';
 import type { Account } from '@types';
 import { Suspense, use } from 'react';
 
@@ -16,28 +16,32 @@ const CurrenciesList = () => {
             ) : error ? (
                 <>
                     <p>{error.message}</p>
-                    <button onClick={() => refetch()}>refetch</button>
+                    <button onClick={() => refetch()}>retry currencies</button>
                 </>
             ) : (
-                <ul>
-                    {data?.map((currency) => (
-                        <li key={currency.code}>
-                            {currency.name} ({currency.code})
-                        </li>
-                    ))}
-                </ul>
+                <>
+                    <ul>
+                        {data?.map((currency) => (
+                            <li key={currency.code}>
+                                {currency.name} ({currency.code})
+                            </li>
+                        ))}
+                    </ul>
+                    <button onClick={() => refetch()}>refetch currencies</button>
+                </>
             )}
         </TitledSection>
     );
 };
 
 type AccountsListProps = {
-    res: PromiseResource<Account[]>;
+    promise: Promise<Account[]>;
+    refetch: () => void;
 };
-const AccountsList = ({ res }: AccountsListProps) => {
+const AccountsList = ({ promise, refetch }: AccountsListProps) => {
     console.log('[AccountsList] rendered');
 
-    const accounts = use(res.request.promise);
+    const accounts = use(promise);
 
     return (
         <TitledSection title="Accounts">
@@ -46,12 +50,19 @@ const AccountsList = ({ res }: AccountsListProps) => {
                     <li key={account.id}>{account.currencyCode}</li>
                 ))}
             </ul>
+            <button
+                onClick={() => {
+                    refetch();
+                }}
+            >
+                refetch accounts
+            </button>
         </TitledSection>
     );
 };
 
 export const HomePage = () => {
-    const [res, { refetch }] = usePromiseResource(getAccounts);
+    const [accountsPromise, refetchAccounts, _isPending] = usePromiseResource(getAccounts);
 
     return (
         <>
@@ -63,18 +74,18 @@ export const HomePage = () => {
                             <p>{err.message}</p>
                             <button
                                 onClick={() => {
-                                    refetch();
+                                    refetchAccounts();
                                     reset();
                                 }}
                             >
-                                refetch
+                                retry accounts
                             </button>
                         </>
                     );
                 }}
             >
                 <Suspense fallback={<p>Loading accounts...</p>}>
-                    <AccountsList res={res} />
+                    <AccountsList promise={accountsPromise} refetch={refetchAccounts} />
                 </Suspense>
             </ErrorBoundary>
         </>

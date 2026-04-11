@@ -8,7 +8,6 @@ export type Resource<T> = {
 export type ResourceActions = {
     refetch: () => void;
 };
-
 export const useResource = <T>(
     fetcher: (signal: AbortSignal) => Promise<T>,
 ): [Resource<T>, ResourceActions] => {
