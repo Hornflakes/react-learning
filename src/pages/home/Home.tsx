@@ -1,13 +1,13 @@
 import { getAccounts, getCurrencies } from '@apis';
-import { ErrorBoundary, TitledSection } from '@components';
-import { useResource, useSuspenseResource } from '@hooks';
-import type { Account } from '@types';
-import { Suspense, use } from 'react';
+import { SuspenseAsync, TitledSection } from '@components';
+import { useEffectResource, useSuspenseResource } from '@hooks';
 
 const CurrenciesList = () => {
     console.log('[CurrenciesList] rendered');
 
-    const [{ data, state, error }, { refetch }] = useResource(getCurrencies);
+    const [{ data, state, error }, { refetch }] = useEffectResource({
+        fetcher: getCurrencies,
+    });
 
     return (
         <TitledSection title="Currencies">
@@ -34,63 +34,53 @@ const CurrenciesList = () => {
     );
 };
 
-type AccountsListProps = {
-    promise: Promise<Account[]>;
-    refetch: () => void;
-};
-const AccountsList = ({ promise, refetch }: AccountsListProps) => {
+const AccountsList = () => {
     console.log('[AccountsList] rendered');
 
-    const accounts = use(promise);
-
-    return (
-        <TitledSection title="Accounts">
-            <ul>
-                {accounts.map((account) => (
-                    <li key={account.id}>{account.currencyCode}</li>
-                ))}
-            </ul>
-            <button
-                onClick={() => {
-                    refetch();
-                }}
-            >
-                refetch accounts
-            </button>
-        </TitledSection>
-    );
-};
-
-export const HomePage = () => {
-    const [accountsPromise, refetchAccounts, _isPending] = useSuspenseResource({
+    const { promise, refetch } = useSuspenseResource({
         cacheKey: 'accounts',
         fetcher: getAccounts,
     });
 
     return (
+        <SuspenseAsync
+            promise={promise}
+            refetch={refetch}
+            pending={<p>Loading accounts...</p>}
+            ready={(data) => (
+                <TitledSection title="Accounts">
+                    <ul>
+                        {data.map((account) => (
+                            <li key={account.id}>{account.currencyCode}</li>
+                        ))}
+                    </ul>
+                    <button onClick={() => refetch()}>refetch accounts</button>
+                </TitledSection>
+            )}
+            errored={({ error, refetch, reset }) => (
+                <>
+                    <p>{error.message}</p>
+                    <button
+                        onClick={() => {
+                            refetch();
+                            reset();
+                        }}
+                    >
+                        retry accounts
+                    </button>
+                </>
+            )}
+        ></SuspenseAsync>
+    );
+};
+
+export const HomePage = () => {
+    console.log('[HomePage] rendered');
+
+    return (
         <>
             <CurrenciesList />
-            <ErrorBoundary
-                fallback={(err, reset) => {
-                    return (
-                        <>
-                            <p>{err.message}</p>
-                            <button
-                                onClick={() => {
-                                    refetchAccounts();
-                                    reset();
-                                }}
-                            >
-                                retry accounts
-                            </button>
-                        </>
-                    );
-                }}
-            >
-                <Suspense fallback={<p>Loading accounts...</p>}>
-                    <AccountsList promise={accountsPromise} refetch={refetchAccounts} />
-                </Suspense>
-            </ErrorBoundary>
+            <AccountsList />
         </>
     );
 };

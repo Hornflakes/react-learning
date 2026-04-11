@@ -1,17 +1,24 @@
 import { useEffect, useState } from 'react';
 
-export type Resource<T> = {
-    data: T | null;
+type EffectResourceOpts<R> = {
+    fetcher: (signal: AbortSignal) => Promise<R>;
+};
+
+export type EffectResource<R> = {
+    data: R | null;
     state: 'pending' | 'ready' | 'refreshing' | 'errored';
     error: Error | null;
 };
-export type ResourceActions = {
+export type EffectResourceActions = {
     refetch: () => void;
 };
-export const useResource = <T>(
-    fetcher: (signal: AbortSignal) => Promise<T>,
-): [Resource<T>, ResourceActions] => {
-    const [res, setRes] = useState<Resource<T>>({
+
+export const useEffectResource = <R>(
+    opts: EffectResourceOpts<R>,
+): [EffectResource<R>, EffectResourceActions] => {
+    const { fetcher } = opts;
+
+    const [res, setRes] = useState<EffectResource<R>>({
         data: null,
         state: 'pending',
         error: null,

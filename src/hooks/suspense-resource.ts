@@ -10,26 +10,29 @@ const suspenseResourceCache = new Map<
     }
 >();
 
-export type SuspenseResourceOpts<R, T> = {
+type SuspenseResourceOpts<R> = {
     cacheKey: string;
-    fetcher: (signal: AbortSignal, arg?: T) => Promise<R>;
-    initialArg?: T;
+    fetcher: (signal: AbortSignal) => Promise<R>;
 };
-export type SuspenseResource<R, T> = [Promise<R>, (arg?: T) => void, boolean];
-export const useSuspenseResource = <R, T>(
-    opts: SuspenseResourceOpts<R, T>,
-): SuspenseResource<R, T> => {
-    const { cacheKey, fetcher, initialArg } = opts;
+
+export type SuspenseResource<R> = {
+    promise: Promise<R>;
+    refetch: () => void;
+    isPending: boolean;
+};
+
+export const useSuspenseResource = <R>(opts: SuspenseResourceOpts<R>): SuspenseResource<R> => {
+    const { cacheKey, fetcher } = opts;
 
     const [isPending, startTransition] = useTransition();
     const [, forceUpdate] = useState(0);
 
-    const getResource = (arg?: T) => {
+    const getResource = () => {
         let res = suspenseResourceCache.get(cacheKey);
         if (!res) {
             const controller = new AbortController();
             res = {
-                promise: fetcher(controller.signal, arg),
+                promise: fetcher(controller.signal),
                 abort: () => controller.abort(),
             };
             suspenseResourceCache.set(cacheKey, res);
@@ -37,7 +40,7 @@ export const useSuspenseResource = <R, T>(
         return res;
     };
 
-    const resource = getResource(initialArg);
+    const resource = getResource();
 
     const refetch = useCallback(() => {
         const oldRes = suspenseResourceCache.get(cacheKey);
@@ -71,5 +74,5 @@ export const useSuspenseResource = <R, T>(
         };
     }, [cacheKey]);
 
-    return [resource.promise, refetch, isPending];
+    return { promise: resource.promise, refetch, isPending };
 };
