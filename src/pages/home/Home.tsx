@@ -1,47 +1,21 @@
 import { getAccounts, getCurrencies } from '@apis';
 import { TitledSection } from '@components';
-import { type Account, type Currency } from '@types';
-import { useEffect, useState } from 'react';
+import { useResource } from '@hooks';
 
 const CurrenciesList = () => {
     console.log('[CurrenciesList] rendered');
 
-    const [currencies, setCurrencies] = useState<Currency[]>([]);
-    const [currenciesPending, setCurrenciesPending] = useState(true);
-    const [currenciesError, setCurrenciesError] = useState('');
-
-    useEffect(() => {
-        let cancelled = false;
-
-        getCurrencies()
-            .then((data) => {
-                if (cancelled) return;
-                setCurrencies(data);
-            })
-            .catch((err) => {
-                if (cancelled) return;
-                console.error('Error fetching currencies:', err);
-                setCurrenciesError('Error fetching currencies');
-            })
-            .finally(() => {
-                if (cancelled) return;
-                setCurrenciesPending(false);
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, []);
+    const { data, state, error } = useResource(getCurrencies);
 
     return (
         <TitledSection title="Currencies">
-            {currenciesPending ? (
+            {state === 'pending' ? (
                 <p>Loading currencies...</p>
-            ) : currenciesError ? (
-                <p>{currenciesError}</p>
+            ) : error ? (
+                <p>{error.message}</p>
             ) : (
                 <ul>
-                    {currencies.map((currency) => (
+                    {data?.map((currency) => (
                         <li key={currency.code}>
                             {currency.name} ({currency.code})
                         </li>
@@ -55,42 +29,17 @@ const CurrenciesList = () => {
 const AccountsList = () => {
     console.log('[AccountsList] rendered');
 
-    const [accounts, setAccounts] = useState<Account[]>([]);
-    const [accountsPending, setAccountsPending] = useState(true);
-    const [accountsError, setAccountsError] = useState('');
-
-    useEffect(() => {
-        let cancelled = false;
-
-        getAccounts()
-            .then((data) => {
-                if (cancelled) return;
-                setAccounts(data);
-            })
-            .catch((err) => {
-                if (cancelled) return;
-                console.error('Error fetching accounts:', err);
-                setAccountsError('Error fetching accounts');
-            })
-            .finally(() => {
-                if (cancelled) return;
-                setAccountsPending(false);
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, []);
+    const { data, state, error } = useResource(getAccounts);
 
     return (
         <TitledSection title="Accounts">
-            {accountsPending ? (
+            {state === 'pending' ? (
                 <p>Loading accounts...</p>
-            ) : accountsError ? (
-                <p>{accountsError}</p>
+            ) : error ? (
+                <p>{error.message}</p>
             ) : (
                 <ul>
-                    {accounts.map((account) => (
+                    {data?.map((account) => (
                         <li key={account.id}>{account.currencyCode}</li>
                     ))}
                 </ul>

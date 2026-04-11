@@ -1,5 +1,5 @@
-import { mockReq } from '@apis';
 import type { Currency } from '@types';
+import { createMockReq } from '@utils';
 
 const currencies: Currency[] = [
     { code: 'EUR', name: 'Euro', symbol: '€' },
@@ -8,4 +8,4 @@ const currencies: Currency[] = [
     { code: 'HUF', name: 'Hungarian Forint', symbol: ' Ft' },
 ];
 
-export const getCurrencies = async (): Promise<Currency[]> => mockReq({ data: currencies });
+export const getCurrencies = createMockReq({ data: currencies });

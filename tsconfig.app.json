@@ -24,8 +24,10 @@
         "paths": {
             "@apis": ["./src/apis"],
             "@components": ["./src/components"],
+            "@hooks": ["./src/hooks"],
             "@pages": ["./src/pages"],
-            "@types": ["./src/types"]
+            "@types": ["./src/types"],
+            "@utils": ["./src/utils"]
         }
     },
     "include": ["src"]
