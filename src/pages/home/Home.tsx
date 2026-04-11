@@ -1,7 +1,7 @@
 import { getAccounts, getCurrencies } from '@apis';
-import { TitledSection } from '@components';
+import { ErrorBoundary, TitledSection } from '@components';
 import { useResource } from '@hooks';
-import { use, useEffect } from 'react';
+import { Suspense, use, useEffect } from 'react';
 
 const CurrenciesList = () => {
     console.log('[CurrenciesList] rendered');
@@ -60,7 +60,18 @@ export const HomePage = () => {
     return (
         <>
             <CurrenciesList />
-            <AccountsList />
+            <ErrorBoundary
+                fallback={(err, reset) => (
+                    <>
+                        <p>{err.message}</p>
+                        <button onClick={() => reset()}>refetch</button>
+                    </>
+                )}
+            >
+                <Suspense fallback={<p>Loading accounts...</p>}>
+                    <AccountsList />
+                </Suspense>
+            </ErrorBoundary>
         </>
     );
 };
