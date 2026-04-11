@@ -1,6 +1,6 @@
 import { getAccounts, getCurrencies } from '@apis';
 import { ErrorBoundary, TitledSection } from '@components';
-import { usePromiseResource, useResource } from '@hooks';
+import { useResource, useSuspenseResource } from '@hooks';
 import type { Account } from '@types';
 import { Suspense, use } from 'react';
 
@@ -62,7 +62,10 @@ const AccountsList = ({ promise, refetch }: AccountsListProps) => {
 };
 
 export const HomePage = () => {
-    const [accountsPromise, refetchAccounts, _isPending] = usePromiseResource(getAccounts);
+    const [accountsPromise, refetchAccounts, _isPending] = useSuspenseResource({
+        cacheKey: 'accounts',
+        fetcher: getAccounts,
+    });
 
     return (
         <>
