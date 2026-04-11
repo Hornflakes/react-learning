@@ -2,36 +2,56 @@ import { useEffect, useState } from 'react';
 
 type Resource<T> = {
     data: T | null;
-    state: 'pending' | 'ready' | 'errored';
+    state: 'pending' | 'ready' | 'refreshing' | 'errored';
     error: Error | null;
 };
+type ResourceActions = {
+    refetch: () => void;
+};
 
-export const useResource = <T>(fetcher: (signal: AbortSignal) => Promise<T>): Resource<T> => {
-    const [data, setData] = useState<Resource<T>['data']>(null);
-    const [state, setState] = useState<Resource<T>['state']>('pending');
-    const [error, setError] = useState<Resource<T>['error']>(null);
+export const useResource = <T>(
+    fetcher: (signal: AbortSignal) => Promise<T>,
+): [Resource<T>, ResourceActions] => {
+    const [res, setRes] = useState<Resource<T>>({
+        data: null,
+        state: 'pending',
+        error: null,
+    });
+
+    const [version, setVersion] = useState(0);
+    const refetch = () => {
+        setRes((prev) => ({
+            ...prev,
+            state: 'refreshing',
+        }));
+        setVersion((v) => v + 1);
+    };
 
     useEffect(() => {
         const controller = new AbortController();
 
         fetcher(controller.signal)
-            .then((result) => {
-                setData(result);
-                setState('ready');
-                setError(null);
+            .then((data) => {
+                setRes({
+                    data,
+                    state: 'ready',
+                    error: null,
+                });
             })
             .catch((err) => {
                 if (controller.signal.aborted) return;
 
-                setData(null);
-                setState('errored');
-                setError(err);
+                setRes({
+                    data: null,
+                    state: 'errored',
+                    error: err instanceof Error ? err : new Error(String(err)),
+                });
             });
 
         return () => {
             controller.abort();
         };
-    }, [fetcher]);
+    }, [fetcher, version]);
 
-    return { data, state, error };
+    return [res, { refetch }] as const;
 };
