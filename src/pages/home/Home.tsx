@@ -1,7 +1,8 @@
 import { getAccounts, getCurrencies } from '@apis';
 import { ErrorBoundary, TitledSection } from '@components';
-import { useResource } from '@hooks';
-import { Suspense, use, useEffect } from 'react';
+import { usePromiseResource, useResource, type PromiseResource } from '@hooks';
+import type { Account } from '@types';
+import { Suspense, use } from 'react';
 
 const CurrenciesList = () => {
     console.log('[CurrenciesList] rendered');
@@ -30,20 +31,13 @@ const CurrenciesList = () => {
     );
 };
 
-let accountsController = new AbortController();
-const accountsPromise = getAccounts(accountsController.signal);
-
-const AccountsList = () => {
+type AccountsListProps = {
+    res: PromiseResource<Account[]>;
+};
+const AccountsList = ({ res }: AccountsListProps) => {
     console.log('[AccountsList] rendered');
-    const accounts = use(accountsPromise);
 
-    useEffect(() => {
-        accountsController = new AbortController();
-
-        return () => {
-            accountsController.abort();
-        };
-    }, []);
+    const accounts = use(res.request.promise);
 
     return (
         <TitledSection title="Accounts">
@@ -57,19 +51,30 @@ const AccountsList = () => {
 };
 
 export const HomePage = () => {
+    const [res, { refetch }] = usePromiseResource(getAccounts);
+
     return (
         <>
             <CurrenciesList />
             <ErrorBoundary
-                fallback={(err, reset) => (
-                    <>
-                        <p>{err.message}</p>
-                        <button onClick={() => reset()}>refetch</button>
-                    </>
-                )}
+                fallback={(err, reset) => {
+                    return (
+                        <>
+                            <p>{err.message}</p>
+                            <button
+                                onClick={() => {
+                                    refetch();
+                                    reset();
+                                }}
+                            >
+                                refetch
+                            </button>
+                        </>
+                    );
+                }}
             >
                 <Suspense fallback={<p>Loading accounts...</p>}>
-                    <AccountsList />
+                    <AccountsList res={res} />
                 </Suspense>
             </ErrorBoundary>
         </>

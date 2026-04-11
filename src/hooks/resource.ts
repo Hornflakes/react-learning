@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 
-type Resource<T> = {
+export type Resource<T> = {
     data: T | null;
     state: 'pending' | 'ready' | 'refreshing' | 'errored';
     error: Error | null;
 };
-type ResourceActions = {
+export type ResourceActions = {
     refetch: () => void;
 };
 
