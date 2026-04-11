@@ -6,13 +6,12 @@ type AsyncProps<R> = {
     ready: (data: R) => ReactNode;
 };
 const Async = <R,>({ promise, ready }: AsyncProps<R>) => {
-    console.log('[Async] rendered');
-
     const data = use(promise);
+
     return <>{ready(data)}</>;
 };
 
-export type SuspenseAsyncProps<R> = {
+type SuspenseAsyncProps<R> = {
     promise: Promise<R>;
     refetch: () => void;
     pending: ReactNode;
@@ -34,8 +33,6 @@ export const SuspenseAsync = <R,>({
     ready,
     errored,
 }: SuspenseAsyncProps<R>) => {
-    console.log('[SuspenseAsync] rendered');
-
     return (
         <ErrorBoundary fallback={(error, reset) => errored({ error, refetch, reset })}>
             <Suspense fallback={pending}>

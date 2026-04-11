@@ -4,11 +4,10 @@ type EffectResourceOpts<R> = {
     fetcher: (signal: AbortSignal) => Promise<R>;
 };
 
-export type EffectResource<R> = {
-    data: R | null;
-    state: 'pending' | 'ready' | 'refreshing' | 'errored';
-    error: Error | null;
-};
+export type EffectResource<R> =
+    | { state: 'pending'; data: null; error: null }
+    | { state: 'ready' | 'refreshing'; data: R; error: null }
+    | { state: 'errored'; data: R | null; error: Error };
 export type EffectResourceActions = {
     refetch: () => void;
 };
@@ -26,10 +25,10 @@ export const useEffectResource = <R>(
 
     const [version, setVersion] = useState(0);
     const refetch = () => {
-        setRes((prev) => ({
-            ...prev,
-            state: 'refreshing',
-        }));
+        setRes((prev) => {
+            if (prev.data === null) return { data: null, state: 'pending', error: null };
+            return { data: prev.data, state: 'refreshing', error: null };
+        });
         setVersion((v) => v + 1);
     };
 
@@ -47,11 +46,13 @@ export const useEffectResource = <R>(
             .catch((err) => {
                 if (controller.signal.aborted) return;
 
-                setRes({
-                    data: null,
+                console.error(err);
+
+                setRes((prev) => ({
+                    data: prev.data,
                     state: 'errored',
                     error: err instanceof Error ? err : new Error(String(err)),
-                });
+                }));
             });
 
         return () => {

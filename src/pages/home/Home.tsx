@@ -1,36 +1,37 @@
 import { getAccounts, getCurrencies } from '@apis';
-import { SuspenseAsync, TitledSection } from '@components';
+import { EffectAsync, SuspenseAsync, TitledSection } from '@components';
 import { useEffectResource, useSuspenseResource } from '@hooks';
 
 const CurrenciesList = () => {
     console.log('[CurrenciesList] rendered');
 
-    const [{ data, state, error }, { refetch }] = useEffectResource({
+    const [resource, { refetch }] = useEffectResource({
         fetcher: getCurrencies,
     });
 
     return (
-        <TitledSection title="Currencies">
-            {state === 'pending' ? (
-                <p>Loading currencies...</p>
-            ) : error ? (
-                <>
-                    <p>{error.message}</p>
-                    <button onClick={() => refetch()}>retry currencies</button>
-                </>
-            ) : (
-                <>
+        <EffectAsync
+            resource={resource}
+            pending={<p>Loading currencies...</p>}
+            ready={(data) => (
+                <TitledSection title="Currencies">
                     <ul>
-                        {data?.map((currency) => (
+                        {data.map((currency) => (
                             <li key={currency.code}>
                                 {currency.name} ({currency.code})
                             </li>
                         ))}
                     </ul>
                     <button onClick={() => refetch()}>refetch currencies</button>
+                </TitledSection>
+            )}
+            errored={(error) => (
+                <>
+                    <p>{error.message}</p>
+                    <button onClick={() => refetch()}>retry currencies</button>
                 </>
             )}
-        </TitledSection>
+        ></EffectAsync>
     );
 };
 

@@ -46,9 +46,7 @@ const mockReq = async <T>(
 ): Promise<T> => {
     await randomDelay({ min: minResponseTime, max: maxResponseTime }, signal);
 
-    if (shouldFail(failRate)) {
-        throw new Error('Mock request failed');
-    }
+    if (shouldFail(failRate)) throw new Error('Mock request failed');
 
     return structuredClone(data);
 };
