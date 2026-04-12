@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useTransition } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 const suspenseResourceAbortTimersCache = new Map<string, ReturnType<typeof setTimeout>>();
 const suspenseResourceCache = new Map<
@@ -18,13 +18,10 @@ type SuspenseResourceOpts<R> = {
 export type SuspenseResource<R> = {
     promise: Promise<R>;
     refetch: () => void;
-    isPending: boolean;
 };
 
 export const useSuspenseResource = <R>(opts: SuspenseResourceOpts<R>): SuspenseResource<R> => {
     const { cacheKey, fetcher } = opts;
-
-    const [isPending, startTransition] = useTransition();
     const [, forceUpdate] = useState(0);
 
     const getResource = () => {
@@ -48,9 +45,7 @@ export const useSuspenseResource = <R>(opts: SuspenseResourceOpts<R>): SuspenseR
 
         suspenseResourceCache.delete(cacheKey);
 
-        startTransition(() => {
-            forceUpdate((x) => x + 1);
-        });
+        forceUpdate((x) => x + 1);
     }, [cacheKey]);
 
     useEffect(() => {
@@ -74,5 +69,5 @@ export const useSuspenseResource = <R>(opts: SuspenseResourceOpts<R>): SuspenseR
         };
     }, [cacheKey]);
 
-    return { promise: resource.promise, refetch, isPending };
+    return { promise: resource.promise, refetch };
 };

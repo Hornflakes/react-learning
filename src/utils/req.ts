@@ -41,7 +41,7 @@ type MockReqOpts<T> = {
     failRate?: number;
 };
 const mockReq = async <T>(
-    { data, minResponseTime = 500, maxResponseTime = 1000, failRate = 0.1 }: MockReqOpts<T>,
+    { data, minResponseTime = 2000, maxResponseTime = 3000, failRate = 0 }: MockReqOpts<T>,
     signal: AbortSignal,
 ): Promise<T> => {
     await randomDelay({ min: minResponseTime, max: maxResponseTime }, signal);
