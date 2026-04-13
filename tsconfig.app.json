@@ -24,6 +24,7 @@
         "paths": {
             "@apis": ["./src/apis"],
             "@components": ["./src/components"],
+            "@contexts": ["./src/contexts"],
             "@hooks": ["./src/hooks"],
             "@pages": ["./src/pages"],
             "@types": ["./src/types"],

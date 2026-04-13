@@ -1,5 +1,10 @@
+import { AccountsProvider } from '@contexts';
 import { HomePage } from '@pages';
 
 export const App = () => {
-    return <HomePage />;
+    return (
+        <AccountsProvider>
+            <HomePage />
+        </AccountsProvider>
+    );
 };
