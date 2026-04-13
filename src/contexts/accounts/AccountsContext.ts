@@ -21,7 +21,9 @@ export const accountsReducer = (accounts: Account[], action: AccountsAction) => 
     }
 };
 
-export const initialAccounts = structuredClone(accounts);
+export const localStorageAccountsKey = 'accounts';
+export const defaultAccounts = structuredClone(accounts);
+
 export const AccountsContext = createContext<Account[] | undefined>(undefined);
 export const AccountsDispatchContext = createContext<Dispatch<AccountsAction> | undefined>(
     undefined,

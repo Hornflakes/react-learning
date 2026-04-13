@@ -60,5 +60,5 @@ export const useEffectResource = <R>(
         };
     }, [fetcher, version]);
 
-    return [res, { refetch }] as const;
+    return [res, { refetch }];
 };

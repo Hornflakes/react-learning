@@ -1,7 +1,8 @@
 import { getCurrencies } from '@apis';
-import { SuspenseAsync, TitledSection } from '@components';
+import { Dialog, type DialogHandle, SuspenseAsync, TitledSection } from '@components';
 import { useAccounts } from '@contexts';
 import { useSuspenseResource } from '@hooks';
+import { useRef } from 'react';
 
 const CurrenciesList = () => {
     console.log('[CurrenciesList] rendered');
@@ -20,7 +21,12 @@ const CurrenciesList = () => {
                 <TitledSection title="Currencies">
                     <ul>
                         {data.map((currency) => (
-                            <li key={currency.code}>
+                            <li
+                                key={currency.code}
+                                style={{
+                                    marginBlock: '.75rem',
+                                }}
+                            >
                                 {currency.name} ({currency.code})
                             </li>
                         ))}
@@ -45,6 +51,20 @@ const CurrenciesList = () => {
     );
 };
 
+const CreateAccountDialog = () => {
+    const dialogRef = useRef<DialogHandle>(null);
+
+    return (
+        <>
+            <button onClick={() => dialogRef.current?.showModal()}>create account</button>
+            <Dialog ref={dialogRef}>
+                <p>Hello, world!</p>
+                <button onClick={() => dialogRef.current?.close()}>cancel</button>
+            </Dialog>
+        </>
+    );
+};
+
 const AccountsList = () => {
     console.log('[AccountsList] rendered');
 
@@ -54,9 +74,17 @@ const AccountsList = () => {
         <TitledSection title="Accounts">
             <ul>
                 {accounts.map((account) => (
-                    <li key={account.id}>{account.currencyCode}</li>
+                    <li
+                        key={account.id}
+                        style={{
+                            marginBlock: '.75rem',
+                        }}
+                    >
+                        {account.currencyCode} <button>delete</button>
+                    </li>
                 ))}
             </ul>
+            <CreateAccountDialog />
         </TitledSection>
     );
 };
