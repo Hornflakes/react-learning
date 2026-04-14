@@ -2,7 +2,8 @@ import { getCurrencies } from '@apis';
 import { Dialog, type DialogHandle, SuspenseAsync, TitledSection } from '@components';
 import { useAccounts } from '@contexts';
 import { useSuspenseResource } from '@hooks';
-import { useRef } from 'react';
+import type { Account } from '@types';
+import { startTransition, useRef } from 'react';
 
 const CurrenciesList = () => {
     console.log('[CurrenciesList] rendered');
@@ -39,8 +40,10 @@ const CurrenciesList = () => {
                     <p>{error.message}</p>
                     <button
                         onClick={() => {
-                            refetch();
-                            reset();
+                            startTransition(() => {
+                                refetch();
+                                reset();
+                            });
                         }}
                     >
                         retry currencies
@@ -51,17 +54,92 @@ const CurrenciesList = () => {
     );
 };
 
-const CreateAccountDialog = () => {
+type CreateAccountDialogProps = {
+    accounts: Account[];
+};
+const CreateAccountDialog = ({ accounts }: CreateAccountDialogProps) => {
     const dialogRef = useRef<DialogHandle>(null);
 
+    const { promise, refetch } = useSuspenseResource({
+        cacheKey: 'currencies',
+        fetcher: getCurrencies,
+    });
+
     return (
-        <>
-            <button onClick={() => dialogRef.current?.showModal()}>create account</button>
-            <Dialog ref={dialogRef}>
-                <p>Hello, world!</p>
-                <button onClick={() => dialogRef.current?.close()}>cancel</button>
-            </Dialog>
-        </>
+        <SuspenseAsync
+            promise={promise}
+            refetch={refetch}
+            pending={<button title="Loading currencies...">create account</button>}
+            ready={(currencies) => {
+                const availableCurrencies = currencies.filter(
+                    (c) => !accounts.some((a) => a.currencyCode === c.code),
+                );
+
+                return (
+                    <>
+                        <button onClick={() => dialogRef.current?.showModal()}>
+                            create account
+                        </button>
+                        <Dialog ref={dialogRef}>
+                            <form
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                }}
+                            >
+                                <label
+                                    htmlFor="currency"
+                                    style={{
+                                        display: 'block',
+                                        marginBottom: '.25rem',
+                                    }}
+                                >
+                                    pick a currency:
+                                </label>
+                                <select name="currency" defaultValue="" required>
+                                    <option value="" disabled>
+                                        select currency...
+                                    </option>
+                                    {availableCurrencies.map((c) => (
+                                        <option key={c.code} value={c.code}>
+                                            {c.name} ({c.code})
+                                        </option>
+                                    ))}
+                                </select>
+
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        marginTop: '1.75rem',
+                                    }}
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={() => dialogRef.current?.close()}
+                                    >
+                                        cancel
+                                    </button>
+                                    <button type="submit">submit</button>
+                                </div>
+                            </form>
+                        </Dialog>
+                    </>
+                );
+            }}
+            errored={({ error: _, refetch, reset }) => (
+                <button
+                    title="retry currencies"
+                    onClick={() => {
+                        startTransition(() => {
+                            refetch();
+                            reset();
+                        });
+                    }}
+                >
+                    create account
+                </button>
+            )}
+        ></SuspenseAsync>
     );
 };
 
@@ -84,7 +162,7 @@ const AccountsList = () => {
                     </li>
                 ))}
             </ul>
-            <CreateAccountDialog />
+            <CreateAccountDialog accounts={accounts} />
         </TitledSection>
     );
 };

@@ -6,10 +6,10 @@ const delay = (ms: number, signal: AbortSignal): Promise<void> => {
         }
 
         const onAbort = () => {
-            clearTimeout(timeoutId);
+            clearTimeout(timer);
             reject(new DOMException('Aborted', 'AbortError'));
         };
-        const timeoutId = setTimeout(() => {
+        const timer = setTimeout(() => {
             signal.removeEventListener('abort', onAbort);
             resolve();
         }, ms);
@@ -41,7 +41,7 @@ type MockReqOpts<T> = {
     failRate?: number;
 };
 const mockReq = async <T>(
-    { data, minResponseTime = 2000, maxResponseTime = 3000, failRate = 0 }: MockReqOpts<T>,
+    { data, minResponseTime = 2000, maxResponseTime = 3000, failRate = 0.33 }: MockReqOpts<T>,
     signal: AbortSignal,
 ): Promise<T> => {
     await randomDelay({ min: minResponseTime, max: maxResponseTime }, signal);

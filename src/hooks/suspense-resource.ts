@@ -7,6 +7,7 @@ const suspenseResourceCache = new Map<
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         promise: Promise<any>;
         abort: () => void;
+        users: number;
     }
 >();
 
@@ -31,6 +32,7 @@ export const useSuspenseResource = <R>(opts: SuspenseResourceOpts<R>): SuspenseR
             res = {
                 promise: fetcher(controller.signal),
                 abort: () => controller.abort(),
+                users: 0,
             };
             suspenseResourceCache.set(cacheKey, res);
         }
@@ -39,6 +41,34 @@ export const useSuspenseResource = <R>(opts: SuspenseResourceOpts<R>): SuspenseR
 
     const resource = getResource();
 
+    useEffect(() => {
+        const res = suspenseResourceCache.get(cacheKey);
+        if (!res) return;
+        res.users++;
+
+        const existingTimer = suspenseResourceAbortTimersCache.get(cacheKey);
+        if (existingTimer) {
+            clearTimeout(existingTimer);
+            suspenseResourceAbortTimersCache.delete(cacheKey);
+        }
+
+        return () => {
+            const res = suspenseResourceCache.get(cacheKey);
+            if (!res) return;
+
+            res.users--;
+            if (res.users) return;
+
+            const timer = setTimeout(() => {
+                res.abort();
+                suspenseResourceCache.delete(cacheKey);
+                suspenseResourceAbortTimersCache.delete(cacheKey);
+            }, 10);
+
+            suspenseResourceAbortTimersCache.set(cacheKey, timer);
+        };
+    }, [cacheKey]);
+
     const refetch = useCallback(() => {
         const oldRes = suspenseResourceCache.get(cacheKey);
         if (oldRes) oldRes.abort();
@@ -46,27 +76,6 @@ export const useSuspenseResource = <R>(opts: SuspenseResourceOpts<R>): SuspenseR
         suspenseResourceCache.delete(cacheKey);
 
         forceUpdate((x) => x + 1);
-    }, [cacheKey]);
-
-    useEffect(() => {
-        const abortTimer = suspenseResourceAbortTimersCache.get(cacheKey);
-        if (abortTimer) {
-            clearTimeout(abortTimer);
-            suspenseResourceAbortTimersCache.delete(cacheKey);
-        }
-
-        return () => {
-            const timeoutId = setTimeout(() => {
-                const res = suspenseResourceCache.get(cacheKey);
-                if (res) {
-                    res.abort();
-                    suspenseResourceCache.delete(cacheKey);
-                }
-                suspenseResourceAbortTimersCache.delete(cacheKey);
-            }, 10);
-
-            suspenseResourceAbortTimersCache.set(cacheKey, timeoutId);
-        };
     }, [cacheKey]);
 
     return { promise: resource.promise, refetch };
