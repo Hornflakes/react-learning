@@ -8,13 +8,14 @@ import { startTransition, useRef } from 'react';
 const CurrenciesList = () => {
     console.log('[CurrenciesList] rendered');
 
-    const { promise, refetch } = useSuspenseResource({
+    const { promise, refetch, version } = useSuspenseResource({
         cacheKey: 'currencies',
         fetcher: getCurrencies,
     });
 
     return (
         <SuspenseAsync
+            key={version}
             promise={promise}
             refetch={refetch}
             pending={<p>Loading currencies...</p>}
@@ -60,13 +61,14 @@ type CreateAccountDialogProps = {
 const CreateAccountDialog = ({ accounts }: CreateAccountDialogProps) => {
     const dialogRef = useRef<DialogHandle>(null);
 
-    const { promise, refetch } = useSuspenseResource({
+    const { promise, refetch, version } = useSuspenseResource({
         cacheKey: 'currencies',
         fetcher: getCurrencies,
     });
 
     return (
         <SuspenseAsync
+            key={version}
             promise={promise}
             refetch={refetch}
             pending={<button title="Loading currencies...">create account</button>}

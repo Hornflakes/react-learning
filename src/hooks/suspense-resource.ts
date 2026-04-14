@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-const suspenseResourceAbortTimersCache = new Map<string, ReturnType<typeof setTimeout>>();
-const suspenseResourceCache = new Map<
+const resourceCache = new Map<
     string,
     {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -10,6 +9,8 @@ const suspenseResourceCache = new Map<
         users: number;
     }
 >();
+const abortTimersCache = new Map<string, ReturnType<typeof setTimeout>>();
+const resourceVersions: Record<string, number> = {};
 
 type SuspenseResourceOpts<R> = {
     cacheKey: string;
@@ -19,6 +20,7 @@ type SuspenseResourceOpts<R> = {
 export type SuspenseResource<R> = {
     promise: Promise<R>;
     refetch: () => void;
+    version: number;
 };
 
 export const useSuspenseResource = <R>(opts: SuspenseResourceOpts<R>): SuspenseResource<R> => {
@@ -26,7 +28,7 @@ export const useSuspenseResource = <R>(opts: SuspenseResourceOpts<R>): SuspenseR
     const [, forceUpdate] = useState(0);
 
     const getResource = () => {
-        let res = suspenseResourceCache.get(cacheKey);
+        let res = resourceCache.get(cacheKey);
         if (!res) {
             const controller = new AbortController();
             res = {
@@ -34,26 +36,45 @@ export const useSuspenseResource = <R>(opts: SuspenseResourceOpts<R>): SuspenseR
                 abort: () => controller.abort(),
                 users: 0,
             };
-            suspenseResourceCache.set(cacheKey, res);
+            resourceCache.set(cacheKey, res);
         }
         return res;
     };
-
     const resource = getResource();
 
+    const refetch = useCallback(() => {
+        const oldRes = resourceCache.get(cacheKey);
+        if (oldRes) oldRes.abort();
+
+        resourceCache.delete(cacheKey);
+        resourceVersions[cacheKey]++;
+
+        window.dispatchEvent(new Event(`suspense-resource_poke-${cacheKey}`));
+    }, [cacheKey]);
+
     useEffect(() => {
-        const res = suspenseResourceCache.get(cacheKey);
+        if (!resourceVersions[cacheKey]) {
+            resourceVersions[cacheKey] = 0;
+        }
+
+        const onPoke = () => forceUpdate((x) => x + 1);
+        window.addEventListener(`suspense-resource_poke-${cacheKey}`, onPoke);
+        return () => window.removeEventListener(`suspense-resource_poke-${cacheKey}`, onPoke);
+    }, [cacheKey]);
+
+    useEffect(() => {
+        const res = resourceCache.get(cacheKey);
         if (!res) return;
         res.users++;
 
-        const existingTimer = suspenseResourceAbortTimersCache.get(cacheKey);
-        if (existingTimer) {
-            clearTimeout(existingTimer);
-            suspenseResourceAbortTimersCache.delete(cacheKey);
+        const timer = abortTimersCache.get(cacheKey);
+        if (timer) {
+            clearTimeout(timer);
+            abortTimersCache.delete(cacheKey);
         }
 
         return () => {
-            const res = suspenseResourceCache.get(cacheKey);
+            const res = resourceCache.get(cacheKey);
             if (!res) return;
 
             res.users--;
@@ -61,22 +82,13 @@ export const useSuspenseResource = <R>(opts: SuspenseResourceOpts<R>): SuspenseR
 
             const timer = setTimeout(() => {
                 res.abort();
-                suspenseResourceCache.delete(cacheKey);
-                suspenseResourceAbortTimersCache.delete(cacheKey);
+                resourceCache.delete(cacheKey);
+                abortTimersCache.delete(cacheKey);
             }, 10);
 
-            suspenseResourceAbortTimersCache.set(cacheKey, timer);
+            abortTimersCache.set(cacheKey, timer);
         };
     }, [cacheKey]);
 
-    const refetch = useCallback(() => {
-        const oldRes = suspenseResourceCache.get(cacheKey);
-        if (oldRes) oldRes.abort();
-
-        suspenseResourceCache.delete(cacheKey);
-
-        forceUpdate((x) => x + 1);
-    }, [cacheKey]);
-
-    return { promise: resource.promise, refetch };
+    return { promise: resource.promise, refetch, version: resourceVersions[cacheKey] };
 };
