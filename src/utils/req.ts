@@ -1,4 +1,4 @@
-const delay = (ms: number, signal: AbortSignal): Promise<void> => {
+export const delay = (ms: number, signal: AbortSignal): Promise<void> => {
     return new Promise((resolve, reject) => {
         if (signal.aborted) {
             reject(new DOMException('Aborted', 'AbortError'));

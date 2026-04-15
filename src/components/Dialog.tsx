@@ -8,8 +8,9 @@ export type DialogHandle = {
 type DialogProps = {
     ref: Ref<DialogHandle>;
     children: ReactNode;
+    onClose?: () => void;
 };
-export const Dialog = ({ ref, children }: DialogProps) => {
+export const Dialog = ({ ref, children, onClose }: DialogProps) => {
     const dialogRef = useRef<HTMLDialogElement>(null);
 
     useImperativeHandle(ref, () => {
@@ -20,7 +21,7 @@ export const Dialog = ({ ref, children }: DialogProps) => {
     }, []);
 
     return (
-        <dialog ref={dialogRef} closedby="any">
+        <dialog ref={dialogRef} closedby="any" onClose={() => onClose?.()}>
             {children}
         </dialog>
     );

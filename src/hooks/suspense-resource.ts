@@ -44,7 +44,7 @@ export const useSuspenseResource = <R>(opts: SuspenseResourceOpts<R>): SuspenseR
 
     const refetch = useCallback(() => {
         const oldRes = resourceCache.get(cacheKey);
-        if (oldRes) oldRes.abort();
+        oldRes?.abort();
 
         resourceCache.delete(cacheKey);
         resourceVersions[cacheKey]++;
@@ -53,9 +53,7 @@ export const useSuspenseResource = <R>(opts: SuspenseResourceOpts<R>): SuspenseR
     }, [cacheKey]);
 
     useEffect(() => {
-        if (!resourceVersions[cacheKey]) {
-            resourceVersions[cacheKey] = 0;
-        }
+        resourceVersions[cacheKey] ??= 0;
 
         const onPoke = () => forceUpdate((x) => x + 1);
         window.addEventListener(`suspense-resource_poke-${cacheKey}`, onPoke);

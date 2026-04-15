@@ -1,9 +1,10 @@
 import { getCurrencies } from '@apis';
 import { Dialog, type DialogHandle, SuspenseAsync, TitledSection } from '@components';
-import { useAccounts } from '@contexts';
-import { useSuspenseResource } from '@hooks';
-import type { Account } from '@types';
-import { startTransition, useRef } from 'react';
+import { useAccounts, useAccountsDispatch } from '@contexts';
+import { useAsyncDispatch, useSuspenseResource } from '@hooks';
+import type { Account, Currency } from '@types';
+import type { FormActionState } from '@utils';
+import { startTransition, useActionState, useRef } from 'react';
 
 const CurrenciesList = () => {
     console.log('[CurrenciesList] rendered');
@@ -55,11 +56,99 @@ const CurrenciesList = () => {
     );
 };
 
+type AccountFormProps = {
+    ref: React.RefObject<HTMLFormElement | null>;
+    availableCurrencies: Currency[];
+    onSuccess: () => void;
+    onCancel: () => void;
+};
+const AccountForm = ({ ref, availableCurrencies, onSuccess, onCancel }: AccountFormProps) => {
+    console.log('[AccountForm] rendered');
+
+    const dispatch = useAccountsDispatch();
+    const { asyncDispatch, cancelAsyncDispatch } = useAsyncDispatch(dispatch);
+
+    const [, formAction, isPending] = useActionState<FormActionState, FormData>(
+        async (_, formData) => {
+            const currencyCode = formData.get('currencyCode') as string;
+            if (!currencyCode) {
+                return { message: 'Please select a currency', status: 'errored' };
+            }
+
+            try {
+                await asyncDispatch({
+                    type: 'create',
+                    payload: { balance: 0, currencyCode },
+                });
+                onSuccess();
+                return { message: 'Account created succesfully!', status: 'ready' };
+            } catch (err) {
+                if (err instanceof DOMException && err.name === 'AbortError') {
+                    return { message: '', status: 'unresolved' };
+                }
+                return { message: 'Unknown error occured.', status: 'errored' };
+            }
+        },
+        { message: '', status: 'unresolved' },
+    );
+
+    return (
+        <form ref={ref} action={formAction}>
+            <label style={{ display: 'block', marginBottom: '.25rem' }}>pick a currency:</label>
+            <select
+                name="currencyCode"
+                defaultValue=""
+                required
+                style={{
+                    width: '100%',
+                }}
+            >
+                <option value="" disabled>
+                    select currency...
+                </option>
+                {availableCurrencies.map((c) => (
+                    <option key={c.code} value={c.code}>
+                        {c.name} ({c.code})
+                    </option>
+                ))}
+            </select>
+
+            <div
+                style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: '2rem',
+                    marginTop: '1.75rem',
+                }}
+            >
+                <button
+                    type="button"
+                    onClick={() => {
+                        if (!isPending) {
+                            onCancel();
+                            return;
+                        }
+                        cancelAsyncDispatch();
+                    }}
+                >
+                    cancel
+                </button>
+                <button type="submit" disabled={isPending}>
+                    {isPending ? 'creating account...' : 'create account'}
+                </button>
+            </div>
+        </form>
+    );
+};
+
 type CreateAccountDialogProps = {
     accounts: Account[];
 };
 const CreateAccountDialog = ({ accounts }: CreateAccountDialogProps) => {
+    console.log('[CreateAccountDialog] rendered');
+
     const dialogRef = useRef<DialogHandle>(null);
+    const formRef = useRef<HTMLFormElement>(null);
 
     const { promise, refetch, version } = useSuspenseResource({
         cacheKey: 'currencies',
@@ -82,48 +171,13 @@ const CreateAccountDialog = ({ accounts }: CreateAccountDialogProps) => {
                         <button onClick={() => dialogRef.current?.showModal()}>
                             create account
                         </button>
-                        <Dialog ref={dialogRef}>
-                            <form
-                                onSubmit={(e) => {
-                                    e.preventDefault();
-                                }}
-                            >
-                                <label
-                                    htmlFor="currency"
-                                    style={{
-                                        display: 'block',
-                                        marginBottom: '.25rem',
-                                    }}
-                                >
-                                    pick a currency:
-                                </label>
-                                <select name="currency" defaultValue="" required>
-                                    <option value="" disabled>
-                                        select currency...
-                                    </option>
-                                    {availableCurrencies.map((c) => (
-                                        <option key={c.code} value={c.code}>
-                                            {c.name} ({c.code})
-                                        </option>
-                                    ))}
-                                </select>
-
-                                <div
-                                    style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        marginTop: '1.75rem',
-                                    }}
-                                >
-                                    <button
-                                        type="button"
-                                        onClick={() => dialogRef.current?.close()}
-                                    >
-                                        cancel
-                                    </button>
-                                    <button type="submit">submit</button>
-                                </div>
-                            </form>
+                        <Dialog ref={dialogRef} onClose={() => formRef.current?.reset()}>
+                            <AccountForm
+                                ref={formRef}
+                                availableCurrencies={availableCurrencies}
+                                onSuccess={() => dialogRef.current?.close()}
+                                onCancel={() => dialogRef.current?.close()}
+                            />
                         </Dialog>
                     </>
                 );
