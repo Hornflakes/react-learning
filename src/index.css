@@ -1,7 +1,22 @@
-[popover].toast-message {
-    inset: auto;
+.toasts {
+    position: fixed;
     bottom: 24px;
     left: 24px;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 12px;
+}
+
+.toast-anchor {
+    height: 2rem;
+}
+
+[popover].toast {
+    position: fixed;
+    inset: auto;
+
+    bottom: anchor(bottom);
+    left: anchor(left);
 
     box-shadow:
         0 10px 15px -3px rgba(0, 0, 0, 0.1),

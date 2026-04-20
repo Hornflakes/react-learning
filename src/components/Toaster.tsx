@@ -1,34 +1,33 @@
+import type { Toast } from '@contexts';
 import { useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
 
-export type ToastProps = {
-    type: 'success' | 'error';
-    message: string;
-    onClose: () => void;
-};
-export const Toast = ({ type, message, onClose }: ToastProps) => {
+export type ToasterProps = {
+    onClose: (id: number) => void;
+    anchorName: string;
+} & Toast;
+export const Toaster = ({ id, type, message, onClose, anchorName }: ToasterProps) => {
     const popoverRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         popoverRef.current?.showPopover();
 
-        const timer = setTimeout(() => onClose(), 5000);
+        const timer = setTimeout(() => onClose(id), 5000);
         return () => {
             clearTimeout(timer);
         };
-    }, [onClose]);
+    }, [id, onClose]);
 
-    return createPortal(
+    return (
         <div
             ref={popoverRef}
             popover="manual"
-            className="toast-message"
+            className="toast"
             style={{
                 color: type === 'success' ? 'green' : 'red',
+                positionAnchor: anchorName,
             }}
         >
             {message}
-        </div>,
-        document.body,
+        </div>
     );
 };

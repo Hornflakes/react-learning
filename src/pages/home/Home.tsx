@@ -1,24 +1,10 @@
 import { getCurrencies } from '@apis';
-import {
-    Dialog,
-    type DialogHandle,
-    SuspenseAsync,
-    TitledSection,
-    Toast,
-    type ToastProps,
-} from '@components';
-import { useAccounts, useAccountsDispatch } from '@contexts';
+import { Dialog, type DialogHandle, SuspenseAsync, TitledSection } from '@components';
+import { useAccounts, useAccountsDispatch, useToastsDispatch } from '@contexts';
 import { useAsyncDispatch, useSuspenseResource } from '@hooks';
 import type { Account, Currency } from '@types';
 import type { FormActionState } from '@utils';
-import {
-    startTransition,
-    useActionState,
-    useEffect,
-    useEffectEvent,
-    useRef,
-    useState,
-} from 'react';
+import { startTransition, useActionState, useEffect, useEffectEvent, useRef } from 'react';
 
 const CurrenciesList = () => {
     console.log('[CurrenciesList] rendered');
@@ -118,72 +104,70 @@ const AccountForm = ({ ref, availableCurrencies, onSuccess, onCancel }: AccountF
         { message: '', status: 'unresolved', timestamp: 0 },
     );
 
-    const [toastType, setToastType] = useState<ToastProps['type'] | ''>('');
-    const onStatusChange = useEffectEvent((status: typeof state.status) => {
-        if (status === 'ready') {
-            setToastType('success');
-            return;
-        }
-        if (status === 'errored') {
-            setToastType('error');
-        }
+    const toastsDispatch = useToastsDispatch();
+
+    const onStatusChange = useEffectEvent((state: FormActionState) => {
+        if (!['ready', 'errored'].includes(state.status)) return;
+
+        toastsDispatch({
+            type: 'create',
+            payload: {
+                type: state.status === 'ready' ? 'success' : 'error',
+                message: state.message,
+            },
+        });
     });
 
     useEffect(() => {
-        onStatusChange(state.status);
-    }, [state.status, state.timestamp]);
+        onStatusChange(state);
+    }, [state]);
 
     return (
-        <>
-            <form ref={ref} action={formAction}>
-                <label style={{ display: 'block', marginBottom: '.25rem' }}>pick a currency:</label>
-                <select
-                    name="currencyCode"
-                    defaultValue=""
-                    required
-                    style={{
-                        width: '100%',
-                    }}
-                >
-                    <option value="" disabled>
-                        select currency...
+        <form ref={ref} action={formAction}>
+            <label style={{ display: 'block', marginBottom: '.25rem' }}>pick a currency:</label>
+            <select
+                name="currencyCode"
+                defaultValue=""
+                required
+                style={{
+                    width: '100%',
+                }}
+            >
+                <option value="" disabled>
+                    select currency...
+                </option>
+                {availableCurrencies.map((c) => (
+                    <option key={c.code} value={c.code}>
+                        {c.name} ({c.code})
                     </option>
-                    {availableCurrencies.map((c) => (
-                        <option key={c.code} value={c.code}>
-                            {c.name} ({c.code})
-                        </option>
-                    ))}
-                </select>
+                ))}
+            </select>
 
-                <div
-                    style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        gap: '2rem',
-                        marginTop: '1.75rem',
+            <div
+                style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: '2rem',
+                    marginTop: '1.75rem',
+                }}
+            >
+                <button
+                    type="button"
+                    onClick={() => {
+                        if (!isPending) {
+                            onCancel();
+                            return;
+                        }
+                        cancelAsyncDispatch();
                     }}
                 >
-                    <button
-                        type="button"
-                        onClick={() => {
-                            if (!isPending) {
-                                onCancel();
-                                return;
-                            }
-                            cancelAsyncDispatch();
-                        }}
-                    >
-                        cancel
-                    </button>
-                    <button type="submit" disabled={isPending}>
-                        {isPending ? 'creating account...' : 'create account'}
-                    </button>
-                </div>
-            </form>
-            {toastType && (
-                <Toast message={state.message} type={toastType} onClose={() => setToastType('')} />
-            )}
-        </>
+                    cancel
+                </button>
+                <button type="submit" disabled={isPending}>
+                    {isPending ? 'creating account...' : 'create account'}
+                </button>
+            </div>
+        </form>
     );
 };
 

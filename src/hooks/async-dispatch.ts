@@ -5,7 +5,7 @@ type AsyncDispatchOpts<A> = {
     dispatch: Dispatch<A>;
     failRate?: number;
 };
-export const useAsyncDispatch = <A>({ dispatch, failRate = 0.25 }: AsyncDispatchOpts<A>) => {
+export const useAsyncDispatch = <A>({ dispatch, failRate = 0 }: AsyncDispatchOpts<A>) => {
     const controllerRef = useRef<AbortController>(null);
 
     const asyncDispatch = useCallback(
