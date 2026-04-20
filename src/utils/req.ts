@@ -29,7 +29,7 @@ const randomDelay = ({ min, max }: RandomDelayOpts, signal: AbortSignal): Promis
     return delay(randomMs, signal);
 };
 
-const shouldFail = (failRate: number): boolean => {
+export const shouldFail = (failRate: number): boolean => {
     const safeFailRate = Math.min(Math.max(failRate, 0), 1);
     return Math.random() < safeFailRate;
 };

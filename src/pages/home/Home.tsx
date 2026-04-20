@@ -1,10 +1,24 @@
 import { getCurrencies } from '@apis';
-import { Dialog, type DialogHandle, SuspenseAsync, TitledSection } from '@components';
+import {
+    Dialog,
+    type DialogHandle,
+    SuspenseAsync,
+    TitledSection,
+    Toast,
+    type ToastProps,
+} from '@components';
 import { useAccounts, useAccountsDispatch } from '@contexts';
 import { useAsyncDispatch, useSuspenseResource } from '@hooks';
 import type { Account, Currency } from '@types';
 import type { FormActionState } from '@utils';
-import { startTransition, useActionState, useRef } from 'react';
+import {
+    startTransition,
+    useActionState,
+    useEffect,
+    useEffectEvent,
+    useRef,
+    useState,
+} from 'react';
 
 const CurrenciesList = () => {
     console.log('[CurrenciesList] rendered');
@@ -66,13 +80,19 @@ const AccountForm = ({ ref, availableCurrencies, onSuccess, onCancel }: AccountF
     console.log('[AccountForm] rendered');
 
     const dispatch = useAccountsDispatch();
-    const { asyncDispatch, cancelAsyncDispatch } = useAsyncDispatch(dispatch);
+    const { asyncDispatch, cancelAsyncDispatch } = useAsyncDispatch({
+        dispatch,
+    });
 
-    const [, formAction, isPending] = useActionState<FormActionState, FormData>(
+    const [state, formAction, isPending] = useActionState<FormActionState, FormData>(
         async (_, formData) => {
             const currencyCode = formData.get('currencyCode') as string;
             if (!currencyCode) {
-                return { message: 'Please select a currency', status: 'errored' };
+                return {
+                    message: 'Please select a currency',
+                    status: 'errored',
+                    timestamp: Date.now(),
+                };
             }
 
             try {
@@ -81,63 +101,89 @@ const AccountForm = ({ ref, availableCurrencies, onSuccess, onCancel }: AccountF
                     payload: { balance: 0, currencyCode },
                 });
                 onSuccess();
-                return { message: 'Account created succesfully!', status: 'ready' };
+                return {
+                    message: 'Account created succesfully!',
+                    status: 'ready',
+                    timestamp: Date.now(),
+                };
             } catch (err) {
                 if (err instanceof DOMException && err.name === 'AbortError') {
-                    return { message: '', status: 'unresolved' };
+                    return { message: '', status: 'unresolved', timestamp: Date.now() };
                 }
-                return { message: 'Unknown error occured.', status: 'errored' };
+                console.error(err);
+                const message = err instanceof Error ? err.message : 'Unknown error occured.';
+                return { message, status: 'errored', timestamp: Date.now() };
             }
         },
-        { message: '', status: 'unresolved' },
+        { message: '', status: 'unresolved', timestamp: 0 },
     );
 
-    return (
-        <form ref={ref} action={formAction}>
-            <label style={{ display: 'block', marginBottom: '.25rem' }}>pick a currency:</label>
-            <select
-                name="currencyCode"
-                defaultValue=""
-                required
-                style={{
-                    width: '100%',
-                }}
-            >
-                <option value="" disabled>
-                    select currency...
-                </option>
-                {availableCurrencies.map((c) => (
-                    <option key={c.code} value={c.code}>
-                        {c.name} ({c.code})
-                    </option>
-                ))}
-            </select>
+    const [toastType, setToastType] = useState<ToastProps['type'] | ''>('');
+    const onStatusChange = useEffectEvent((status: typeof state.status) => {
+        if (status === 'ready') {
+            setToastType('success');
+            return;
+        }
+        if (status === 'errored') {
+            setToastType('error');
+        }
+    });
 
-            <div
-                style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: '2rem',
-                    marginTop: '1.75rem',
-                }}
-            >
-                <button
-                    type="button"
-                    onClick={() => {
-                        if (!isPending) {
-                            onCancel();
-                            return;
-                        }
-                        cancelAsyncDispatch();
+    useEffect(() => {
+        onStatusChange(state.status);
+    }, [state.status, state.timestamp]);
+
+    return (
+        <>
+            <form ref={ref} action={formAction}>
+                <label style={{ display: 'block', marginBottom: '.25rem' }}>pick a currency:</label>
+                <select
+                    name="currencyCode"
+                    defaultValue=""
+                    required
+                    style={{
+                        width: '100%',
                     }}
                 >
-                    cancel
-                </button>
-                <button type="submit" disabled={isPending}>
-                    {isPending ? 'creating account...' : 'create account'}
-                </button>
-            </div>
-        </form>
+                    <option value="" disabled>
+                        select currency...
+                    </option>
+                    {availableCurrencies.map((c) => (
+                        <option key={c.code} value={c.code}>
+                            {c.name} ({c.code})
+                        </option>
+                    ))}
+                </select>
+
+                <div
+                    style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: '2rem',
+                        marginTop: '1.75rem',
+                    }}
+                >
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (!isPending) {
+                                onCancel();
+                                return;
+                            }
+                            cancelAsyncDispatch();
+                        }}
+                    >
+                        cancel
+                    </button>
+                    <button type="submit" disabled={isPending}>
+                        {isPending ? 'creating account...' : 'create account'}
+                    </button>
+                </div>
+            </form>
+            {toastType && (
+                <Toast message={state.message} type={toastType} onClose={() => setToastType('')} />
+            )}
+        </>
     );
 };
 

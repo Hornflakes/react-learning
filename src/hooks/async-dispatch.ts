@@ -1,7 +1,11 @@
-import { delay } from '@utils';
+import { delay, shouldFail } from '@utils';
 import { useCallback, useRef, type Dispatch } from 'react';
 
-export const useAsyncDispatch = <A>(dispatch: Dispatch<A>) => {
+type AsyncDispatchOpts<A> = {
+    dispatch: Dispatch<A>;
+    failRate?: number;
+};
+export const useAsyncDispatch = <A>({ dispatch, failRate = 0.25 }: AsyncDispatchOpts<A>) => {
     const controllerRef = useRef<AbortController>(null);
 
     const asyncDispatch = useCallback(
@@ -11,9 +15,10 @@ export const useAsyncDispatch = <A>(dispatch: Dispatch<A>) => {
             controllerRef.current = controller;
 
             await delay(delayMs, controller.signal);
+            if (shouldFail(failRate)) throw new Error('Mock dispatch failed');
             dispatch(action);
         },
-        [dispatch],
+        [dispatch, failRate],
     );
 
     const cancelAsyncDispatch = useCallback(() => {
