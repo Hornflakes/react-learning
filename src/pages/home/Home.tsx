@@ -1,10 +1,18 @@
 import { getCurrencies } from '@apis';
-import { Dialog, type DialogHandle, SuspenseAsync, TitledSection } from '@components';
+import { Dialog, SuspenseAsync, TitledSection, type DialogHandle } from '@components';
 import { useAccounts, useAccountsDispatch, useToastsDispatch } from '@contexts';
 import { useAsyncDispatch, useSuspenseResource } from '@hooks';
 import type { Account, Currency } from '@types';
-import type { FormActionState } from '@utils';
-import { startTransition, useActionState, useEffect, useEffectEvent, useRef } from 'react';
+import { delay, shouldFail, type FormActionState } from '@utils';
+import {
+    startTransition,
+    useActionState,
+    useEffect,
+    useEffectEvent,
+    useOptimistic,
+    useRef,
+    useState,
+} from 'react';
 
 const CurrenciesList = () => {
     console.log('[CurrenciesList] rendered');
@@ -233,21 +241,68 @@ const AccountsList = () => {
     console.log('[AccountsList] rendered');
 
     const accounts = useAccounts();
+    const dispatch = useAccountsDispatch();
+
+    const [error, setError] = useState('');
+    const [optimisticAccounts, deleteAccount] = useOptimistic<
+        (Account & { deleting?: boolean })[],
+        string
+    >(accounts, (currAccounts, id) =>
+        currAccounts.map((a) =>
+            a.id === id
+                ? {
+                      ...a,
+                      deleting: true,
+                  }
+                : a,
+        ),
+    );
+
+    const attemptDelete = (id: string) => {
+        setError('');
+
+        startTransition(async () => {
+            deleteAccount(id);
+
+            try {
+                await delay(3000);
+                if (shouldFail(0.25)) throw new Error('Delete failed');
+
+                dispatch({
+                    type: 'delete',
+                    payload: id,
+                });
+            } catch (err) {
+                if (!(err instanceof Error)) return;
+                setError(err.message);
+            }
+        });
+    };
 
     return (
         <TitledSection title="Accounts">
             <ul>
-                {accounts.map((account) => (
+                {optimisticAccounts.map((account) => (
                     <li
                         key={account.id}
                         style={{
                             marginBlock: '.75rem',
+                            transition: 'opacity 0.2s',
+                            opacity: account.deleting ? 0.5 : 1,
+                            textDecoration: account.deleting ? 'line-through' : 'none',
                         }}
                     >
-                        {account.currencyCode} <button>delete</button>
+                        {account.currencyCode}{' '}
+                        <button
+                            disabled={account.deleting}
+                            onClick={() => attemptDelete(account.id)}
+                        >
+                            delet{account.deleting ? 'ing...' : 'e'}
+                        </button>
                     </li>
                 ))}
             </ul>
+            {error && <p style={{ color: 'red' }}>{error}</p>}
             <CreateAccountDialog accounts={accounts} />
         </TitledSection>
     );

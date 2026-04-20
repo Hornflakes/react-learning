@@ -10,7 +10,7 @@ export const accountsReducer = (accounts: Account[], action: AccountsAction) => 
             return [
                 ...accounts,
                 {
-                    id: 'account_' + (accounts.length + 1),
+                    id: Date.now(),
                     ...action.payload,
                 },
             ];

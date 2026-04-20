@@ -1,4 +1,12 @@
-export const delay = (ms: number, signal: AbortSignal): Promise<void> => {
+export const delay = (ms: number): Promise<void> => {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve();
+        }, ms);
+    });
+};
+
+export const abortableDelay = (ms: number, signal: AbortSignal): Promise<void> => {
     return new Promise((resolve, reject) => {
         if (signal.aborted) {
             reject(new DOMException('Aborted', 'AbortError'));
@@ -22,11 +30,14 @@ type RandomDelayOpts = {
     min: number;
     max: number;
 };
-const randomDelay = ({ min, max }: RandomDelayOpts, signal: AbortSignal): Promise<void> => {
+const randomAbortableDelay = (
+    { min, max }: RandomDelayOpts,
+    signal: AbortSignal,
+): Promise<void> => {
     const safeMin = Math.min(min, max);
     const safeMax = Math.max(min, max);
     const randomMs = Math.floor(Math.random() * (safeMax - safeMin + 1)) + safeMin;
-    return delay(randomMs, signal);
+    return abortableDelay(randomMs, signal);
 };
 
 export const shouldFail = (failRate: number): boolean => {
@@ -44,7 +55,7 @@ const mockReq = async <T>(
     { data, minResponseTime = 2000, maxResponseTime = 3000, failRate = 0 }: MockReqOpts<T>,
     signal: AbortSignal,
 ): Promise<T> => {
-    await randomDelay({ min: minResponseTime, max: maxResponseTime }, signal);
+    await randomAbortableDelay({ min: minResponseTime, max: maxResponseTime }, signal);
 
     if (shouldFail(failRate)) throw new Error('Mock request failed');
 
