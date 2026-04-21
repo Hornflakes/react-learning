@@ -85,7 +85,7 @@ const AccountForm = ({ ref, availableCurrencies, onSuccess, onCancel }: AccountF
                 return {
                     message: 'Please select a currency',
                     status: 'errored',
-                    timestamp: Date.now(),
+                    timestamp: Temporal.Now.instant().epochMilliseconds,
                 };
             }
 
@@ -98,15 +98,23 @@ const AccountForm = ({ ref, availableCurrencies, onSuccess, onCancel }: AccountF
                 return {
                     message: 'Account created succesfully!',
                     status: 'ready',
-                    timestamp: Date.now(),
+                    timestamp: Temporal.Now.instant().epochMilliseconds,
                 };
             } catch (err) {
                 if (err instanceof DOMException && err.name === 'AbortError') {
-                    return { message: '', status: 'unresolved', timestamp: Date.now() };
+                    return {
+                        message: '',
+                        status: 'unresolved',
+                        timestamp: Temporal.Now.instant().epochMilliseconds,
+                    };
                 }
                 console.error(err);
                 const message = err instanceof Error ? err.message : 'Unknown error occured.';
-                return { message, status: 'errored', timestamp: Date.now() };
+                return {
+                    message,
+                    status: 'errored',
+                    timestamp: Temporal.Now.instant().epochMilliseconds,
+                };
             }
         },
         { message: '', status: 'unresolved', timestamp: 0 },
@@ -246,7 +254,7 @@ const AccountsList = () => {
     const [error, setError] = useState('');
     const [optimisticAccounts, deleteAccount] = useOptimistic<
         (Account & { deleting?: boolean })[],
-        string
+        number
     >(accounts, (currAccounts, id) =>
         currAccounts.map((a) =>
             a.id === id
@@ -258,7 +266,7 @@ const AccountsList = () => {
         ),
     );
 
-    const attemptDelete = (id: string) => {
+    const attemptDelete = (id: number) => {
         setError('');
 
         startTransition(async () => {

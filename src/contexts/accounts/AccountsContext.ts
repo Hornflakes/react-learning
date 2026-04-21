@@ -3,14 +3,14 @@ import type { Account } from '@types';
 import type { Action } from '@utils';
 import { createContext, useContext, type Dispatch } from 'react';
 
-type AccountsAction = Action<'create', Omit<Account, 'id'>> | Action<'delete', string>;
+type AccountsAction = Action<'create', Omit<Account, 'id'>> | Action<'delete', number>;
 export const accountsReducer = (accounts: Account[], action: AccountsAction) => {
     switch (action.type) {
         case 'create': {
             return [
                 ...accounts,
                 {
-                    id: Date.now(),
+                    id: Temporal.Now.instant().epochMilliseconds,
                     ...action.payload,
                 },
             ];

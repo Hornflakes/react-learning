@@ -14,7 +14,7 @@ export const toastsReducer = (toasts: Toast[], action: ToastsAction) => {
             return [
                 ...toasts,
                 {
-                    id: Date.now(),
+                    id: Temporal.Now.instant().epochMilliseconds,
                     ...action.payload,
                 },
             ];

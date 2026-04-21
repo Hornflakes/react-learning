@@ -1,7 +1,7 @@
 import type { Currency } from '@types';
 
 export type Account = {
-    id: string;
+    id: number;
     balance: number;
     currencyCode: Currency['code'];
 };
