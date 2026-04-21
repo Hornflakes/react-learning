@@ -1,18 +1,10 @@
 import { getCurrencies } from '@apis';
 import { Dialog, SuspenseAsync, TitledSection, type DialogHandle } from '@components';
-import { useAccounts, useAccountsDispatch, useToastsDispatch } from '@contexts';
-import { useAsyncDispatch, useSuspenseResource } from '@hooks';
+import { accountsReducer, useAccounts, useAccountsDispatch, useToastsDispatch } from '@contexts';
+import { useAsyncDispatch, useOptimisticReducer, useSuspenseResource } from '@hooks';
 import type { Account, Currency } from '@types';
-import { delay, shouldFail, type FormActionState } from '@utils';
-import {
-    startTransition,
-    useActionState,
-    useEffect,
-    useEffectEvent,
-    useOptimistic,
-    useRef,
-    useState,
-} from 'react';
+import { type FormActionState } from '@utils';
+import { startTransition, useActionState, useEffect, useEffectEvent, useRef } from 'react';
 
 const CurrenciesList = () => {
     console.log('[CurrenciesList] rendered');
@@ -92,7 +84,10 @@ const AccountForm = ({ ref, availableCurrencies, onSuccess, onCancel }: AccountF
             try {
                 await asyncDispatch({
                     type: 'create',
-                    payload: { balance: 0, currencyCode },
+                    payload: {
+                        balance: 0,
+                        currencyCode,
+                    },
                 });
                 onSuccess();
                 return {
@@ -108,7 +103,9 @@ const AccountForm = ({ ref, availableCurrencies, onSuccess, onCancel }: AccountF
                         timestamp: Temporal.Now.instant().epochMilliseconds,
                     };
                 }
+
                 console.error(err);
+
                 const message = err instanceof Error ? err.message : 'Unknown error occured.';
                 return {
                     message,
@@ -250,39 +247,37 @@ const AccountsList = () => {
 
     const accounts = useAccounts();
     const dispatch = useAccountsDispatch();
+    const { asyncDispatch } = useAsyncDispatch({ dispatch });
+    const toastsDispatch = useToastsDispatch();
 
-    const [error, setError] = useState('');
-    const [optimisticAccounts, deleteAccount] = useOptimistic<
-        (Account & { deleting?: boolean })[],
-        number
-    >(accounts, (currAccounts, id) =>
-        currAccounts.map((a) =>
-            a.id === id
-                ? {
-                      ...a,
-                      deleting: true,
-                  }
-                : a,
-        ),
+    const { optimisticState: optimisticAccounts, dispatchOptimistic } = useOptimisticReducer(
+        accounts,
+        accountsReducer,
     );
 
     const attemptDelete = (id: number) => {
-        setError('');
-
-        startTransition(async () => {
-            deleteAccount(id);
-
+        dispatchOptimistic({ type: 'delete', payload: id }, async () => {
             try {
-                await delay(3000);
-                if (shouldFail(0.25)) throw new Error('Delete failed');
-
-                dispatch({
-                    type: 'delete',
-                    payload: id,
+                await asyncDispatch({ type: 'delete', payload: id });
+                toastsDispatch({
+                    type: 'create',
+                    payload: {
+                        type: 'success',
+                        message: 'Account deleted succesfully!',
+                    },
                 });
             } catch (err) {
                 if (!(err instanceof Error)) return;
-                setError(err.message);
+
+                console.error(err);
+
+                toastsDispatch({
+                    type: 'create',
+                    payload: {
+                        type: 'error',
+                        message: err.message,
+                    },
+                });
             }
         });
     };
@@ -295,22 +290,13 @@ const AccountsList = () => {
                         key={account.id}
                         style={{
                             marginBlock: '.75rem',
-                            transition: 'opacity 0.2s',
-                            opacity: account.deleting ? 0.5 : 1,
-                            textDecoration: account.deleting ? 'line-through' : 'none',
                         }}
                     >
                         {account.currencyCode}{' '}
-                        <button
-                            disabled={account.deleting}
-                            onClick={() => attemptDelete(account.id)}
-                        >
-                            delet{account.deleting ? 'ing...' : 'e'}
-                        </button>
+                        <button onClick={() => attemptDelete(account.id)}>delete</button>
                     </li>
                 ))}
             </ul>
-            {error && <p style={{ color: 'red' }}>{error}</p>}
             <CreateAccountDialog accounts={accounts} />
         </TitledSection>
     );
