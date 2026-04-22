@@ -16,13 +16,11 @@ type SuspenseResourceOpts<R> = {
     cacheKey: string;
     fetcher: (signal: AbortSignal) => Promise<R>;
 };
-
 export type SuspenseResource<R> = {
     promise: Promise<R>;
     refetch: () => void;
     version: number;
 };
-
 export const useSuspenseResource = <R>(opts: SuspenseResourceOpts<R>): SuspenseResource<R> => {
     const { cacheKey, fetcher } = opts;
     const [, forceUpdate] = useState(0);

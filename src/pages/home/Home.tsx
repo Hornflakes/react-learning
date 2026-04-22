@@ -4,7 +4,14 @@ import { accountsReducer, useAccounts, useAccountsDispatch, useToastsDispatch } 
 import { useAsyncDispatch, useOptimisticReducer, useSuspenseResource } from '@hooks';
 import type { Account, Currency } from '@types';
 import { type FormActionState } from '@utils';
-import { startTransition, useActionState, useEffect, useEffectEvent, useRef } from 'react';
+import {
+    startTransition,
+    useActionState,
+    useEffect,
+    useEffectEvent,
+    useRef,
+    type RefObject,
+} from 'react';
 
 const CurrenciesList = () => {
     console.log('[CurrenciesList] rendered');
@@ -57,7 +64,7 @@ const CurrenciesList = () => {
 };
 
 type AccountFormProps = {
-    ref: React.RefObject<HTMLFormElement | null>;
+    ref: RefObject<HTMLFormElement | null>;
     availableCurrencies: Currency[];
     onSuccess: () => void;
     onCancel: () => void;
@@ -105,7 +112,6 @@ const AccountForm = ({ ref, availableCurrencies, onSuccess, onCancel }: AccountF
                 }
 
                 console.error(err);
-
                 const message = err instanceof Error ? err.message : 'Unknown error occured.';
                 return {
                     message,
@@ -248,12 +254,11 @@ const AccountsList = () => {
     const accounts = useAccounts();
     const dispatch = useAccountsDispatch();
     const { asyncDispatch } = useAsyncDispatch({ dispatch });
-    const toastsDispatch = useToastsDispatch();
-
     const { optimisticState: optimisticAccounts, dispatchOptimistic } = useOptimisticReducer(
         accounts,
         accountsReducer,
     );
+    const toastsDispatch = useToastsDispatch();
 
     const attemptDelete = (id: number) => {
         dispatchOptimistic({ type: 'delete', payload: id }, async () => {
@@ -270,7 +275,6 @@ const AccountsList = () => {
                 if (!(err instanceof Error)) return;
 
                 console.error(err);
-
                 toastsDispatch({
                     type: 'create',
                     payload: {

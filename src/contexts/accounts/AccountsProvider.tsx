@@ -10,7 +10,7 @@ import type { Account } from '@types';
 import { useEffect, type ReactNode } from 'react';
 import { useImmerReducer } from 'use-immer';
 
-const initialAccounts = (initial: Account[]) => {
+const initialAccounts = (initial: Account[]): Account[] => {
     const localStorageState = localStorage.getItem(localStorageAccountsKey);
     if (!localStorageState) return initial;
 

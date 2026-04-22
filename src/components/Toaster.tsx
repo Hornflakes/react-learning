@@ -1,10 +1,10 @@
 import type { Toast } from '@contexts';
 import { useEffect, useRef } from 'react';
 
-export type ToasterProps = {
+type ToasterProps = Toast & {
     onClose: (id: number) => void;
     anchorName: string;
-} & Toast;
+};
 export const Toaster = ({ id, type, message, onClose, anchorName }: ToasterProps) => {
     const popoverRef = useRef<HTMLDivElement>(null);
 

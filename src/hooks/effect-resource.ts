@@ -8,7 +8,7 @@ export type EffectResource<R> =
     | { state: 'pending'; data: null; error: null }
     | { state: 'ready' | 'refreshing'; data: R; error: null }
     | { state: 'errored'; data: R | null; error: Error };
-export type EffectResourceActions = {
+type EffectResourceActions = {
     refetch: () => void;
 };
 

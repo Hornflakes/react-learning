@@ -1,11 +1,11 @@
 import type { EffectResource } from '@hooks';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 type EffectAsnycProps<R> = {
     resource: EffectResource<R>;
-    pending: React.ReactNode;
-    ready: (data: R) => React.ReactNode;
-    errored: (error: Error) => React.ReactNode;
+    pending: ReactNode;
+    ready: (data: R) => ReactNode;
+    errored: (error: Error) => ReactNode;
 };
 export const EffectAsync = <R,>({ resource, pending, ready, errored }: EffectAsnycProps<R>) => {
     const { data, state, error } = resource;

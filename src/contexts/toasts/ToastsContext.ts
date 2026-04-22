@@ -8,7 +8,7 @@ export type Toast = {
 };
 
 export type ToastsAction = Action<'create', Omit<Toast, 'id'>> | Action<'delete', number>;
-export const toastsReducer = (draft: Toast[], action: ToastsAction) => {
+export const toastsReducer = (draft: Toast[], action: ToastsAction): Toast[] => {
     switch (action.type) {
         case 'create': {
             draft.push({

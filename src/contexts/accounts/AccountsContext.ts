@@ -4,7 +4,7 @@ import type { Action } from '@utils';
 import { createContext, useContext, type Dispatch } from 'react';
 
 export type AccountsAction = Action<'create', Omit<Account, 'id'>> | Action<'delete', number>;
-export const accountsReducer = (draft: Account[], action: AccountsAction) => {
+export const accountsReducer = (draft: Account[], action: AccountsAction): Account[] => {
     switch (action.type) {
         case 'create': {
             draft.push({

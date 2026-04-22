@@ -1,6 +1,6 @@
 import { useOptimistic, useTransition } from 'react';
 
-export const useOptimisticReducer = <T, A>(state: T, reducer: (state: T, action: A) => T) => {
+export const useOptimisticReducer = <S, A>(state: S, reducer: (state: S, action: A) => S) => {
     const [isPending, startTransition] = useTransition();
     const [optimisticState, setOptimisticState] = useOptimistic(state, reducer);
 
