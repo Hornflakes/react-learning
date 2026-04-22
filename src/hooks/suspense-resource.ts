@@ -1,16 +1,101 @@
-import { useCallback, useEffect, useState } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useCallback, useEffect, useSyncExternalStore } from 'react';
 
-const resourceCache = new Map<
-    string,
-    {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        promise: Promise<any>;
-        abort: () => void;
-        users: number;
-    }
->();
+type ResourcePromise<R> = {
+    promise: Promise<R>;
+    abort: () => void;
+    users: number;
+    version: number;
+};
+
+const resourceCache = new Map<string, ResourcePromise<any>>();
 const abortTimersCache = new Map<string, ReturnType<typeof setTimeout>>();
 const resourceVersions: Record<string, number> = {};
+const subscribers = new Map<string, Set<() => void>>();
+
+const emit = (cacheKey: string) => {
+    const ss = subscribers.get(cacheKey);
+    if (!ss) return;
+
+    for (const s of ss) {
+        s();
+    }
+};
+
+const store = {
+    subscribe(cacheKey: string, s: () => void) {
+        if (!subscribers.has(cacheKey)) {
+            subscribers.set(cacheKey, new Set());
+        }
+        const ss = subscribers.get(cacheKey)!;
+        ss.add(s);
+
+        return () => {
+            ss.delete(s);
+            if (ss.size === 0) {
+                subscribers.delete(cacheKey);
+            }
+        };
+    },
+
+    getSnapshot(cacheKey: string) {
+        return resourceCache.get(cacheKey);
+    },
+
+    getOrCreate(cacheKey: string, fetcher: (signal: AbortSignal) => Promise<any>) {
+        let res = resourceCache.get(cacheKey);
+        if (!res) {
+            const controller = new AbortController();
+            res = {
+                promise: fetcher(controller.signal),
+                abort: () => controller.abort(),
+                users: 0,
+                version: (resourceVersions[cacheKey] ??= 0),
+            };
+            resourceCache.set(cacheKey, res);
+        }
+        return res;
+    },
+
+    claim(cacheKey: string) {
+        const res = resourceCache.get(cacheKey);
+        if (!res) return;
+
+        res.users++;
+        const timer = abortTimersCache.get(cacheKey);
+        if (timer) {
+            clearTimeout(timer);
+            abortTimersCache.delete(cacheKey);
+        }
+    },
+
+    release(cacheKey: string) {
+        const res = resourceCache.get(cacheKey);
+        if (!res) return;
+
+        res.users--;
+
+        if (res.users <= 0) {
+            const timer = setTimeout(() => {
+                res.abort();
+                resourceCache.delete(cacheKey);
+                abortTimersCache.delete(cacheKey);
+                emit(cacheKey);
+            }, 100);
+
+            abortTimersCache.set(cacheKey, timer);
+        }
+    },
+
+    invalidate(cacheKey: string) {
+        const res = resourceCache.get(cacheKey);
+        res?.abort();
+
+        resourceCache.delete(cacheKey);
+        resourceVersions[cacheKey]++;
+        emit(cacheKey);
+    },
+};
 
 type SuspenseResourceOpts<R> = {
     cacheKey: string;
@@ -23,68 +108,23 @@ export type SuspenseResource<R> = {
 };
 export const useSuspenseResource = <R>(opts: SuspenseResourceOpts<R>): SuspenseResource<R> => {
     const { cacheKey, fetcher } = opts;
-    const [, forceUpdate] = useState(0);
 
-    const getResource = () => {
-        let res = resourceCache.get(cacheKey);
-        if (!res) {
-            const controller = new AbortController();
-            res = {
-                promise: fetcher(controller.signal),
-                abort: () => controller.abort(),
-                users: 0,
-            };
-            resourceCache.set(cacheKey, res);
-        }
-        return res;
-    };
-    const resource = getResource();
+    const storeSubscribe = useCallback(
+        (onStoreChange: () => void) => store.subscribe(cacheKey, onStoreChange),
+        [cacheKey],
+    );
+    const resource =
+        useSyncExternalStore(storeSubscribe, () => store.getSnapshot(cacheKey)) ??
+        store.getOrCreate(cacheKey, fetcher);
 
     const refetch = useCallback(() => {
-        const oldRes = resourceCache.get(cacheKey);
-        oldRes?.abort();
-
-        resourceCache.delete(cacheKey);
-        resourceVersions[cacheKey]++;
-
-        window.dispatchEvent(new Event(`suspense-resource_poke-${cacheKey}`));
+        store.invalidate(cacheKey);
     }, [cacheKey]);
 
     useEffect(() => {
-        resourceVersions[cacheKey] ??= 0;
-
-        const onPoke = () => forceUpdate((x) => x + 1);
-        window.addEventListener(`suspense-resource_poke-${cacheKey}`, onPoke);
-        return () => window.removeEventListener(`suspense-resource_poke-${cacheKey}`, onPoke);
+        store.claim(cacheKey);
+        return () => store.release(cacheKey);
     }, [cacheKey]);
 
-    useEffect(() => {
-        const res = resourceCache.get(cacheKey);
-        if (!res) return;
-        res.users++;
-
-        const timer = abortTimersCache.get(cacheKey);
-        if (timer) {
-            clearTimeout(timer);
-            abortTimersCache.delete(cacheKey);
-        }
-
-        return () => {
-            const res = resourceCache.get(cacheKey);
-            if (!res) return;
-
-            res.users--;
-            if (res.users) return;
-
-            const timer = setTimeout(() => {
-                res.abort();
-                resourceCache.delete(cacheKey);
-                abortTimersCache.delete(cacheKey);
-            }, 10);
-
-            abortTimersCache.set(cacheKey, timer);
-        };
-    }, [cacheKey]);
-
-    return { promise: resource.promise, refetch, version: resourceVersions[cacheKey] };
+    return { promise: resource.promise, refetch, version: resource.version };
 };

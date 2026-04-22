@@ -374,7 +374,7 @@ const Transactions = () => {
 
     return (
         <>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', marginBlock: '.75rem' }}>
                 <button onClick={shuffle}>shuffle</button>
                 <button onClick={unshuffle}>unshuffle</button>
             </div>
@@ -415,7 +415,6 @@ const TransactionsList = () => {
                 flex: 1,
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '.75rem',
                 minHeight: 0,
             }}
         >
