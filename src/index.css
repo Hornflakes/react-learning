@@ -1,3 +1,7 @@
+body {
+    margin-block: 0;
+}
+
 .toasts {
     position: fixed;
     bottom: 24px;

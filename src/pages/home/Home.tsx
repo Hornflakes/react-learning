@@ -2,14 +2,17 @@ import { getCurrencies } from '@apis';
 import { Dialog, SuspenseAsync, TitledSection, type DialogHandle } from '@components';
 import { accountsReducer, useAccounts, useAccountsDispatch, useToastsDispatch } from '@contexts';
 import { useAsyncDispatch, useOptimisticReducer, useSuspenseResource } from '@hooks';
-import type { Account, Currency } from '@types';
+import { createMockTransaction, type Account, type Currency } from '@types';
 import { type FormActionState } from '@utils';
 import {
+    Activity,
     startTransition,
     useActionState,
     useEffect,
     useEffectEvent,
+    useMemo,
     useRef,
+    useState,
     type RefObject,
 } from 'react';
 
@@ -306,13 +309,91 @@ const AccountsList = () => {
     );
 };
 
+const Transactions = () => {
+    console.log('[Transactions] rendered');
+
+    const transactions = useMemo(() => {
+        console.log("[Transactions] transactions[] memo'ed");
+
+        return Array.from({ length: 500 }, (_, i) => createMockTransaction(i));
+    }, []);
+
+    return (
+        <div
+            style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                minHeight: 0,
+                overflowY: 'auto',
+                border: '3px solid',
+                marginBlock: '.75rem',
+            }}
+        >
+            <ul>
+                {transactions.map((t) => (
+                    <li key={t.id}>{t.description}</li>
+                ))}
+            </ul>
+        </div>
+    );
+};
+
+const TransactionsList = () => {
+    console.log('[TransactionsList] rendered');
+
+    const [show, setShow] = useState(false);
+
+    return (
+        <TitledSection
+            title="Transactions"
+            style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                minHeight: 0,
+            }}
+        >
+            <button
+                onClick={() => setShow(!show)}
+                style={{
+                    alignSelf: 'start',
+                }}
+            >
+                {show ? 'hide' : 'show'}
+            </button>
+
+            <Activity mode={show ? 'visible' : 'hidden'}>
+                <Transactions />
+            </Activity>
+        </TitledSection>
+    );
+};
+
 export const HomePage = () => {
     console.log('[HomePage] rendered');
 
     return (
-        <>
+        <div
+            style={{
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100vh',
+            }}
+        >
             <CurrenciesList />
             <AccountsList />
-        </>
+
+            <div
+                style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minHeight: 0,
+                }}
+            >
+                <TransactionsList />
+            </div>
+        </div>
     );
 };
