@@ -13,6 +13,7 @@ const Async = <R,>({ promise, ready }: AsyncProps<R>) => {
 
 type SuspenseAsyncProps<R> = {
     promise: Promise<R>;
+    version: number;
     refetch: () => void;
     pending: ReactNode;
     ready: (data: R) => ReactNode;
@@ -28,6 +29,7 @@ type SuspenseAsyncProps<R> = {
 };
 export const SuspenseAsync = <R,>({
     promise,
+    version,
     refetch,
     pending,
     ready,
@@ -48,7 +50,10 @@ export const SuspenseAsync = <R,>({
     }, [fetching]);
 
     return (
-        <ErrorBoundary fallback={(error, reset) => errored({ error, refetch, reset })}>
+        <ErrorBoundary
+            key={version}
+            fallback={(error, reset) => errored({ error, refetch, reset })}
+        >
             <Suspense fallback={pending}>
                 {showPending ? pending : <Async promise={deferredPromise} ready={ready} />}
             </Suspense>

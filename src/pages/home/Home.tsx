@@ -27,8 +27,8 @@ const CurrenciesList = () => {
 
     return (
         <SuspenseAsync
-            key={version}
             promise={promise}
+            version={version}
             refetch={refetch}
             pending={<p>Loading currencies...</p>}
             ready={(data) => (
@@ -210,8 +210,8 @@ const CreateAccountDialog = ({ accounts }: CreateAccountDialogProps) => {
 
     return (
         <SuspenseAsync
-            key={version}
             promise={promise}
+            version={version}
             refetch={refetch}
             pending={<button title="Loading currencies...">create account</button>}
             ready={(currencies) => {
