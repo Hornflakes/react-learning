@@ -4,9 +4,11 @@ import {
     accountsReducer,
     defaultAccounts,
     localStorageAccountsKey,
+    type AccountsAction,
 } from '@contexts';
 import type { Account } from '@types';
-import { type ReactNode, useEffect, useReducer } from 'react';
+import { useEffect, type ReactNode } from 'react';
+import { useImmerReducer } from 'use-immer';
 
 const initialAccounts = (initial: Account[]) => {
     const localStorageState = localStorage.getItem(localStorageAccountsKey);
@@ -23,7 +25,11 @@ type AccountsProviderProps = {
     children: ReactNode;
 };
 export const AccountsProvider = ({ children }: AccountsProviderProps) => {
-    const [accounts, dispatch] = useReducer(accountsReducer, defaultAccounts, initialAccounts);
+    const [accounts, dispatch] = useImmerReducer<Account[], AccountsAction, Account[]>(
+        accountsReducer,
+        defaultAccounts,
+        initialAccounts,
+    );
 
     useEffect(() => {
         localStorage.setItem(localStorageAccountsKey, JSON.stringify(accounts));

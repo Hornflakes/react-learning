@@ -1,20 +1,30 @@
 import { Toaster } from '@components';
-import { ToastsContext, ToastsDispatchContext, toastsReducer } from '@contexts';
-import { useCallback, useReducer, type ReactNode } from 'react';
+import {
+    ToastsContext,
+    ToastsDispatchContext,
+    toastsReducer,
+    type Toast,
+    type ToastsAction,
+} from '@contexts';
+import { useCallback, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useImmerReducer } from 'use-immer';
 
 type ToastsProviderProps = {
     children: ReactNode;
 };
 export const ToastsProvider = ({ children }: ToastsProviderProps) => {
-    const [toasts, dispatch] = useReducer(toastsReducer, []);
+    const [toasts, dispatch] = useImmerReducer<Toast[], ToastsAction>(toastsReducer, []);
 
-    const removeToast = useCallback((id: number) => {
-        dispatch({
-            type: 'delete',
-            payload: id,
-        });
-    }, []);
+    const removeToast = useCallback(
+        (id: number) => {
+            dispatch({
+                type: 'delete',
+                payload: id,
+            });
+        },
+        [dispatch],
+    );
 
     return (
         <ToastsContext value={toasts}>

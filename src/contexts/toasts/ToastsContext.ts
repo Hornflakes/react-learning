@@ -7,20 +7,18 @@ export type Toast = {
     message: string;
 };
 
-type ToastsAction = Action<'create', Omit<Toast, 'id'>> | Action<'delete', number>;
-export const toastsReducer = (toasts: Toast[], action: ToastsAction) => {
+export type ToastsAction = Action<'create', Omit<Toast, 'id'>> | Action<'delete', number>;
+export const toastsReducer = (draft: Toast[], action: ToastsAction) => {
     switch (action.type) {
         case 'create': {
-            return [
-                ...toasts,
-                {
-                    id: Temporal.Now.instant().epochMilliseconds,
-                    ...action.payload,
-                },
-            ];
+            draft.push({
+                id: Temporal.Now.instant().epochMilliseconds,
+                ...action.payload,
+            });
+            return draft;
         }
         case 'delete': {
-            return toasts.filter((t) => t.id !== action.payload);
+            return draft.filter((t) => t.id !== action.payload);
         }
     }
 };

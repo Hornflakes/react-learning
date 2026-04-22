@@ -3,21 +3,18 @@ import type { Account } from '@types';
 import type { Action } from '@utils';
 import { createContext, useContext, type Dispatch } from 'react';
 
-type AccountsAction = Action<'create', Omit<Account, 'id'>> | Action<'delete', number>;
-export const accountsReducer = (accounts: Account[], action: AccountsAction) => {
+export type AccountsAction = Action<'create', Omit<Account, 'id'>> | Action<'delete', number>;
+export const accountsReducer = (draft: Account[], action: AccountsAction) => {
     switch (action.type) {
         case 'create': {
-            return [
-                ...accounts,
-                {
-                    id: Temporal.Now.instant().epochMilliseconds,
-                    ...action.payload,
-                    // x: '',
-                },
-            ] satisfies Account[];
+            draft.push({
+                id: Temporal.Now.instant().epochMilliseconds,
+                ...action.payload,
+            });
+            return draft;
         }
         case 'delete': {
-            return accounts.filter((a) => a.id !== action.payload);
+            return draft.filter((a) => a.id !== action.payload);
         }
     }
 };
