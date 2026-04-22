@@ -10,6 +10,7 @@ import {
     useActionState,
     useEffect,
     useEffectEvent,
+    useLayoutEffect,
     useMemo,
     useRef,
     useState,
@@ -318,24 +319,87 @@ const Transactions = () => {
         return Array.from({ length: 500 }, (_, i) => createMockTransaction(i));
     }, []);
 
+    const listRef = useRef<HTMLUListElement>(null);
+    const positions = useRef<Map<string, number>>(new Map());
+    const [shuffled, setShuffled] = useState(transactions);
+
+    useLayoutEffect(() => {
+        if (!listRef.current || positions.current.size === 0) return;
+
+        const items = listRef.current.querySelectorAll('li');
+        items.forEach((item) => {
+            const id = item.dataset.id!;
+            const firstTop = positions.current.get(id);
+            const lastTop = item.getBoundingClientRect().top;
+
+            if (firstTop !== undefined && firstTop !== lastTop) {
+                const deltaY = firstTop - lastTop;
+
+                item.animate(
+                    [{ transform: `translateY(${deltaY}px)` }, { transform: 'translateY(0)' }],
+                    {
+                        duration: 400,
+                        easing: 'cubic-bezier(0.2, 0, 0, 1)',
+                    },
+                );
+            }
+        });
+
+        positions.current.clear();
+    }, [shuffled]);
+
+    const shuffle = () => {
+        if (!listRef.current) return;
+
+        const items = listRef.current.querySelectorAll('li');
+        items.forEach((item) => {
+            const id = item.dataset.id!;
+            positions.current.set(id, item.getBoundingClientRect().top);
+        });
+
+        setShuffled((prev) => [...prev].sort(() => Math.random() - 0.5));
+    };
+
+    const unshuffle = () => {
+        if (!listRef.current) return;
+
+        const items = listRef.current.querySelectorAll('li');
+        items.forEach((item) => {
+            const id = item.dataset.id!;
+            positions.current.set(id, item.getBoundingClientRect().top);
+        });
+
+        setShuffled(transactions);
+    };
+
     return (
-        <div
-            style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                minHeight: 0,
-                overflowY: 'auto',
-                border: '3px solid',
-                marginBlock: '.75rem',
-            }}
-        >
-            <ul>
-                {transactions.map((t) => (
-                    <li key={t.id}>{t.description}</li>
-                ))}
-            </ul>
-        </div>
+        <>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button onClick={shuffle}>shuffle</button>
+                <button onClick={unshuffle}>unshuffle</button>
+            </div>
+
+            <div
+                style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '.75rem',
+                    minHeight: 0,
+                    overflowY: 'auto',
+                    border: '3px solid',
+                    marginBottom: '.75rem',
+                }}
+            >
+                <ul ref={listRef}>
+                    {shuffled.map((s) => (
+                        <li key={s.id} data-id={s.id}>
+                            {s.description}
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        </>
     );
 };
 
@@ -351,6 +415,7 @@ const TransactionsList = () => {
                 flex: 1,
                 display: 'flex',
                 flexDirection: 'column',
+                gap: '.75rem',
                 minHeight: 0,
             }}
         >
