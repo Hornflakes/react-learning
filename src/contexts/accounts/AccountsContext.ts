@@ -12,8 +12,9 @@ export const accountsReducer = (accounts: Account[], action: AccountsAction) => 
                 {
                     id: Temporal.Now.instant().epochMilliseconds,
                     ...action.payload,
+                    // x: '',
                 },
-            ];
+            ] satisfies Account[];
         }
         case 'delete': {
             return accounts.filter((a) => a.id !== action.payload);
